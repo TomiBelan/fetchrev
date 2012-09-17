@@ -1,3 +1,4 @@
 *.py[co]
 *~
 py-remoteexec/*
+test[a-z]*

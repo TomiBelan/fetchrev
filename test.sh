@@ -57,8 +57,8 @@ r5c8=`git rev-parse r5c8`
 cd ..
 
 cd testa
-../fetchrev.py bash -c ../testb -- get r5c2
-../fetchrev.py bash -c ../testb -- put r5c8
+../fetchrev.py bash -c -- get ../testb r5c2
+../fetchrev.py bash -c -- put ../testb r5c8
 exists $r5c2 || die "didn't get r5c2"
 exists $r5c3 && die "shouldn't have gotten r5c3"
 cd ..
@@ -85,24 +85,24 @@ cd testx
 seq 1000000 > data
 git add data
 git commit -m seq
-../fetchrev.py bash -c ../testy -- put HEAD
+../fetchrev.py bash -c -- put ../testy HEAD
 echo foo >> data
 git add data
 git commit -m foo
-../fetchrev.py bash -c ../testy -- put HEAD 2>&1 | tee log
+../fetchrev.py bash -c -- put ../testy HEAD 2>&1 | tee log
 grep -q MiB log && die "a one-line patch needed more than 1 MiB of bandwidth"
 info "PASS: a one-line patch was deltaified in a thin pack"
 cp data data2
 git add data2
 git commit -m data2
-../fetchrev.py bash -c ../testy -- put HEAD 2>&1 | tee log
+../fetchrev.py bash -c -- put ../testy HEAD 2>&1 | tee log
 grep -q MiB log && die "duplicating a file required retransfer of blob"
 info "PASS: duplicating a file doesn't require retransfer of blob"
 cp data data3
 echo bar >> data3
 git add data3
 git commit -m data3
-../fetchrev.py bash -c ../testy -- put HEAD 2>&1 | tee log
+../fetchrev.py bash -c -- put ../testy HEAD 2>&1 | tee log
 if grep -q MiB log; then
   info "BONUS FAILED: data3 could have been deltaified but wasn't"   # expected
 else
@@ -132,7 +132,7 @@ for rootorder in 'testa testb' 'testb testa'; do
   info "* simulating first sync"
   rsync -a testa/ testb/ --exclude='objects/*'
   rsync -a testb/ testa/ --exclude='objects/*'
-  ./syncgit.py bash -c $rootorder
+  ./syncgit.py bash -c -- $rootorder
 
   cd testa/rb
   exists r5c2 || die "didn't get r5c2"
@@ -143,11 +143,11 @@ for rootorder in 'testa testb' 'testb testa'; do
 
   info "* adding references using tags and reflogs"
   cd testa/ra
-  ../../fetchrev.py bash -c ../../testmain -- get r5c4
+  ../../fetchrev.py bash -c -- get ../../testmain r5c4
   git tag tr5c4 $r5c4
   cd ../..
   cd testb/rb
-  ../../fetchrev.py bash -c ../../testmain -- get r5c3
+  ../../fetchrev.py bash -c -- get ../../testmain r5c3
   git checkout -q $r5c3
   git checkout -q r5c2
   cd ../..
@@ -155,7 +155,7 @@ for rootorder in 'testa testb' 'testb testa'; do
   info "* simulating second sync"
   rsync -a testa/ testb/ --exclude='objects/*'
   rsync -a testb/ testa/ --exclude='objects/*'
-  ./syncgit.py bash -c $rootorder
+  ./syncgit.py bash -c -- $rootorder
 
   cd testa/rb
   exists $r5c3 || die "didn't get r5c3"
@@ -175,7 +175,7 @@ for rootorder in 'testa testb' 'testb testa'; do
   info "* simulating third sync"
   rsync -a testa/ testb/ --exclude='objects/*'
   rsync -a testb/ testa/ --exclude='objects/*'
-  ./syncgit.py bash -c $rootorder
+  ./syncgit.py bash -c -- $rootorder
 
   cd testa/ra
   exists r5c7 || die "didn't get r5c7"

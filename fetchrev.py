@@ -110,15 +110,16 @@ def receiver(input, output):
     log('receiver: finished\n')
 
 
-def local(input, output, remote_wd, args):
+def local(input, output, args):
+    remote_wd = args[1]
     pickle.dump(remote_wd, output)
     if args[0] == 'get':
         output.write('G')
-        pickle.dump(args[1:], output)
+        pickle.dump(args[2:], output)
         receiver(input, output)
     elif args[0] == 'put':
         output.write('P')
-        sender(input, output, args[1:], True)
+        sender(input, output, args[2:], True)
     else:
         raise ValueError()
 
@@ -140,15 +141,14 @@ def remote(input=None, output=None):
         raise ValueError()
 
 
-def connect(ssh_cmd, remote_wd, args):
-    sys.path.insert(0, sys.path[0]+'/py-remoteexec')
+def connect(ssh_cmd, args):
+    sys.path.insert(1, sys.path[0]+'/py-remoteexec')
     from remoteexec import remote_exec
 
-    with open(__file__) as f:
-        modules = { 'fetchrev': f.read() }
-    p, s = remote_exec(ssh_cmd=ssh_cmd, literal_modules=modules,
+    modules = [sys.path[0]+'/fetchrev.py']
+    p, s = remote_exec(ssh_cmd=ssh_cmd, module_filenames=modules,
                        main_func='fetchrev.remote')
-    local(s.makefile('r', 0), s.makefile('w', 0), remote_wd, args)
+    local(s.makefile('r', 0), s.makefile('w', 0), args)
     p.wait()
 
 
@@ -156,9 +156,7 @@ def main():
     argv = sys.argv[1:]
     ssh_cmd = argv[0:argv.index('--')]
     program_args = argv[argv.index('--')+1:]
-    remote_wd = ssh_cmd[-1]
-    ssh_cmd = ssh_cmd[0:-1]
-    connect(ssh_cmd, remote_wd, program_args)
+    connect(ssh_cmd, program_args)
 
 
 if __name__ == '__main__':

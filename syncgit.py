@@ -90,7 +90,8 @@ def filter_existing_revs(revs):
     return existing_revs
 
 
-def local(input, output, local_root, remote_root):
+def local(input, output, args):
+    local_root, remote_root = args
     pickle.dump(remote_root, output)
     os.chdir(local_root)
     local_root = os.getcwd()
@@ -134,23 +135,22 @@ def remote(input=None, output=None):
         fetchrev.sender(input, output, revs, is_local=False)
 
 
-def connect(ssh_cmd, local_root, remote_root):
+def connect(ssh_cmd, args):
     sys.path.insert(1, sys.path[0]+'/py-remoteexec')
     from remoteexec import remote_exec
 
     modules = [sys.path[0]+'/fetchrev.py', sys.path[0]+'/syncgit.py']
     p, s = remote_exec(ssh_cmd=ssh_cmd, module_filenames=modules,
                        main_func='syncgit.remote')
-    local(s.makefile('r', 0), s.makefile('w', 0), local_root, remote_root)
+    local(s.makefile('r', 0), s.makefile('w', 0), args)
     p.wait()
 
 
 def main():
     argv = sys.argv[1:]
-    ssh_cmd = argv[0:-2]
-    local_root = argv[-2]
-    remote_root = argv[-1]
-    connect(ssh_cmd, local_root, remote_root)
+    ssh_cmd = argv[0:argv.index('--')]
+    program_args = argv[argv.index('--')+1:]
+    connect(ssh_cmd, program_args)
 
 
 if __name__ == '__main__':
