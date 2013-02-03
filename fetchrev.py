@@ -49,15 +49,21 @@ def sender(input, output, revs, is_local, thin=True):
         output.write('Q' + obj)
     for obj in revs_objects:
         ask(obj)
+    need_something = False
     while query_queue:
         have_it = input.read(1) == 'Y'
         obj = query_queue.popleft()
         log('sender: received answer for {}: {}\n'.format(obj, have_it))
         object_status[obj] = HAVE if have_it else NEED
         if not have_it:
+            need_something = True
             parents = SP.check_output(['git', 'rev-parse', obj+'^@']).split()
             for parent in parents:
                 ask(parent)
+    if not need_something:
+        log('sender: no objects needed\n')
+        output.write('N')
+        return
     log('sender: starting packing\n')
     output.write('T')
     args = ['git', 'pack-objects', '--progress', '--stdout']
@@ -88,6 +94,7 @@ def receiver(input, output):
     batch_checker = SP.Popen(['git', 'cat-file', '--batch-check'],
                              stdin=SP.PIPE, stdout=SP.PIPE)
     log('receiver: ready\n')
+    receiving_objects = True
     while True:
         command = input.read(1)
         if command == 'Q':
@@ -100,13 +107,18 @@ def receiver(input, output):
             output.write('N' if result.endswith('missing\n') else 'Y')
         elif command == 'T':
             break
+        elif command == 'N':
+            receiving_objects = False
+            break
         else:
             raise ValueError()
     batch_checker.stdin.close()
     batch_checker.wait()
-    log('receiver: starting unpacking\n')
-    unpacker = SP.Popen(['git', 'unpack-objects'], stdin=input, stdout=SP.PIPE)
-    unpacker.wait()
+    if receiving_objects:
+        log('receiver: starting unpacking\n')
+        unpacker = SP.Popen(['git', 'unpack-objects'],
+                            stdin=input, stdout=SP.PIPE)
+        unpacker.wait()
     log('receiver: finished\n')
 
 
