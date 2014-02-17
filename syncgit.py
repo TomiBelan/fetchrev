@@ -30,7 +30,7 @@ log = fetchrev.log
 
 def list_files(base):
     yield base
-    if os.path.isdir(base):
+    if os.path.isdir(base) and not os.path.islink(base):
         for item in os.listdir(base):
             for entry in list_files(base + '/' + item):
                 yield entry
